@@ -122,6 +122,48 @@ def assign_category_to_todo(username:str, todo_id:int, category_text:str):
         db.commit()
         print("Added category to todo")
 
+@cli.command()
+def list_todos():
+    """Output each todo's ID, text, username and done status."""
+    with get_session() as db:
+        todos = db.exec(select(Todo)).all()
+        if not todos:
+            print("No todos found")
+            return
+        for todo in todos:
+            username = todo.user.username if todo.user else "<unknown>"
+            print(f"ID={todo.id} | text={todo.text} | username={username} | done={todo.done}")
+
+@cli.command()
+def delete_todo(todo_id:int):
+    """Delete a todo by ID."""
+    with get_session() as db:
+        todo = db.exec(select(Todo).where(Todo.id == todo_id)).one_or_none()
+        if not todo:
+            print("Todo doesn't exist")
+            return
+        db.delete(todo)
+        db.commit()
+        print(f"Deleted todo id={todo_id}")
+
+@cli.command()
+def complete_all_todos(username:str):
+    """Mark all of a user's todos as complete."""
+    with get_session() as db:
+        user = db.exec(select(User).where(User.username == username)).one_or_none()
+        if not user:
+            print("User doesn't exist")
+            return
+        todos = db.exec(select(Todo).where(Todo.user_id == user.id, Todo.done == False)).all()
+        if not todos:
+            print(f"No incomplete todos found for {username}")
+            return
+        for todo in todos:
+            todo.done = True
+            db.add(todo)
+        db.commit()
+        print(f"Marked {len(todos)} todos as complete for {username}")
+
 #11. Conclusion
 #Thus concludes your introduction to flask-sqlalchemy. The usage of this library is at the very core of this course.
 
